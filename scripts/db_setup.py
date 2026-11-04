@@ -1,0 +1,197 @@
+"""
+db_setup.py
+-----------
+One-time setup script for the kiki-syn-agent conversation database.
+
+Run this ONCE before starting the agent for the first time:
+    python db_setup.py
+
+What it does:
+  1. Connects to your local PostgreSQL server
+  2. Creates the 'kiki_agent' database if it does not exist
+  3. Creates the LangGraph checkpointer tables inside that database
+
+Requirements:
+  - Docker must be running and the container started: docker compose up -d
+  - The user in POSTGRES_URI must have CREATE DATABASE permissions
+
+Configuration:
+  Set POSTGRES_URI in your .env file, for example:
+      POSTGRES_URI=postgresql://postgres:yourpassword@localhost:5432/kiki_agent
+"""
+
+import sys
+
+import psycopg
+from dotenv import load_dotenv
+from langgraph.checkpoint.postgres import PostgresSaver
+import os
+
+load_dotenv()
+
+POSTGRES_URI = os.environ.get("POSTGRES_URI", "")
+
+if not POSTGRES_URI:
+    print("ERROR: POSTGRES_URI is not set in your .env file.")
+    print("Add a line like:")
+    print("  POSTGRES_URI=postgresql://postgres:yourpassword@localhost:5432/kiki_agent")
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Step 1: Create the database if it doesn't exist
+# ---------------------------------------------------------------------------
+
+# Parse out the database name and build a URI pointing to the default 'postgres' DB
+# so we can run CREATE DATABASE without being connected to the target DB.
+from urllib.parse import urlparse, urlunparse
+
+parsed = urlparse(POSTGRES_URI)
+db_name = parsed.path.lstrip("/")
+admin_uri = urlunparse(parsed._replace(path="/postgres"))
+
+print(f"Connecting to PostgreSQL at {parsed.hostname}:{parsed.port} ...")
+
+try:
+    with psycopg.connect(admin_uri, autocommit=True) as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM pg_database WHERE datname = %s", (db_name,)
+        )
+        if cur.fetchone() is None:
+            conn.execute(f'CREATE DATABASE "{db_name}"')
+            print(f"Database '{db_name}' created.")
+        else:
+            print(f"Database '{db_name}' already exists.")
+except psycopg.OperationalError as e:
+    print(f"\nERROR: Could not connect to PostgreSQL.\n{e}")
+    print("\nMake sure PostgreSQL is running and the credentials in POSTGRES_URI are correct.")
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Step 2: Create LangGraph checkpointer tables inside the target database
+# ---------------------------------------------------------------------------
+
+print("Enabling pgvector extension ...")
+
+with psycopg.connect(POSTGRES_URI, autocommit=True) as conn:
+    conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    print("pgvector extension ready.")
+
+print("Setting up LangGraph checkpointer tables ...")
+
+with psycopg.connect(POSTGRES_URI, autocommit=True) as conn:
+    checkpointer = PostgresSaver(conn)
+    checkpointer.setup()
+
+# Tracks which files have been ingested and their content hash.
+# ingest.py uses this to skip unchanged files on subsequent runs.
+print("Setting up RAG ingestion tracking table ...")
+
+with psycopg.connect(POSTGRES_URI) as conn:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ingested_files (
+            filename    TEXT        PRIMARY KEY,
+            file_hash   TEXT        NOT NULL,
+            chunk_count INTEGER     NOT NULL,
+            ingested_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    conn.commit()
+    print("ingested_files table ready.")
+
+print("Setting up conversation history tables ...")
+
+with psycopg.connect(POSTGRES_URI) as conn:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            thread_id  TEXT        PRIMARY KEY,
+            title      TEXT        NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS message_images (
+            id          BIGSERIAL   PRIMARY KEY,
+            thread_id   TEXT        NOT NULL,
+            image_path  TEXT        NOT NULL,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    conn.commit()
+    print("conversations and message_images tables ready.")
+
+print("Setting up Chainlit data-layer tables ...")
+
+with psycopg.connect(POSTGRES_URI) as conn:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            "id"         UUID    PRIMARY KEY,
+            "identifier" TEXT    NOT NULL UNIQUE,
+            "metadata"   JSONB   NOT NULL DEFAULT '{}',
+            "createdAt"  TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS threads (
+            "id"             TEXT PRIMARY KEY,
+            "createdAt"      TEXT,
+            "name"           TEXT,
+            "userId"         UUID REFERENCES users("id") ON DELETE CASCADE,
+            "userIdentifier" TEXT,
+            "tags"           TEXT[],
+            "metadata"       JSONB
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS steps (
+            "id"            TEXT    PRIMARY KEY,
+            "name"          TEXT    NOT NULL,
+            "type"          TEXT    NOT NULL,
+            "threadId"      TEXT    REFERENCES threads("id") ON DELETE CASCADE,
+            "parentId"      TEXT,
+            "streaming"     BOOLEAN NOT NULL DEFAULT false,
+            "waitForAnswer" BOOLEAN,
+            "isError"       BOOLEAN,
+            "metadata"      JSONB,
+            "tags"          TEXT[],
+            "input"         TEXT,
+            "output"        TEXT,
+            "createdAt"     TEXT,
+            "start"         TEXT,
+            "end"           TEXT,
+            "generation"    JSONB,
+            "showInput"     TEXT,
+            "language"      TEXT,
+            "indent"        INT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS elements (
+            "id"          TEXT PRIMARY KEY,
+            "threadId"    TEXT,
+            "type"        TEXT,
+            "url"         TEXT,
+            "chainlitKey" TEXT,
+            "name"        TEXT NOT NULL,
+            "display"     TEXT,
+            "objectKey"   TEXT,
+            "size"        TEXT,
+            "page"        INT,
+            "language"    TEXT,
+            "forId"       TEXT,
+            "mime"        TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS feedbacks (
+            "id"       TEXT PRIMARY KEY,
+            "forId"    TEXT NOT NULL,
+            "threadId" TEXT NOT NULL,
+            "value"    INT  NOT NULL,
+            "comment"  TEXT
+        )
+    """)
+    conn.commit()
+    print("Chainlit data-layer tables ready.")
+
+print("\nSetup complete. You can now run the agent:")
+print("  .\\start.ps1")

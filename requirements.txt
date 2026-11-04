@@ -1,0 +1,49 @@
+# requirements.txt
+# Install with:  pip install -r requirements.txt
+
+# LangGraph — builds the ReAct agent loop
+langgraph==1.2.11
+
+# LangSmith — observability and tracing for LangGraph agents
+langsmith==0.11.0
+
+# Groq integration for LangChain — provides the LLM via Groq API
+langchain-groq==1.1.3
+
+# Ollama integration for LangChain — provides local LLM via Ollama
+langchain-ollama==1.1.0
+
+# Google Generative AI integration for LangChain — provides Gemini models
+langchain-google-genai==4.3.4
+
+# OpenAI integration for LangChain — provides GPT models
+langchain-openai==1.5.1
+
+# LangChain core — base classes for tools and messages
+langchain-core==1.5.6
+
+# LangChain — main package (needed for @tool decorator imports)
+langchain==1.3.15
+
+# Loads variables from the .env file into the environment
+python-dotenv==1.2.3
+
+# HTTP client — used by kiki_recommend to call the KIKI ML API
+requests==2.34.2
+
+# Chainlit — conversational AI chat UI
+chainlit==2.11.1
+
+# RAG pipeline — vector store, embeddings, document loaders
+langchain-postgres==0.0.17
+langchain-community==0.4.2
+langchain-text-splitters==1.1.2
+pgvector==0.3.6
+pdfplumber==0.11.10
+
+# PostgreSQL checkpointer for LangGraph — persists conversation history
+langgraph-checkpoint-postgres==3.1.2
+
+# PostgreSQL driver (psycopg3) required by langgraph-checkpoint-postgres
+psycopg[binary]==3.3.4
+psycopg-pool==3.3.1
