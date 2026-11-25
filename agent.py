@@ -52,7 +52,6 @@ from langgraph.types import Command
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
-from tools.create_sphere.create_sphere_tool import create_sphere
 from tools.create_pattern.create_pattern_tool import create_pattern
 from tools.reconstruct_lattice.reconstruct_lattice_tool import reconstruct_lattice
 from tools.kiki_recommend.kiki_recommend_tool import kiki_recommend
@@ -102,7 +101,7 @@ class KnowledgeAgentState(TypedDict):
 # ---------------------------------------------------------------------------
 
 _kiki_tools   = [kiki_recommend]
-_synera_tools = [create_sphere, create_pattern, reconstruct_lattice]
+_synera_tools = [create_pattern, reconstruct_lattice]
 
 # ---------------------------------------------------------------------------
 # LLM — OpenAI primary, Gemini fallback
@@ -221,10 +220,6 @@ Tools and their required / optional parameters:
                                     FLU OCT KEV DDK2 HCG PSM2 RDO TEG3
     OPTIONAL  vol_frac    — volume fraction, 0.0–1.0  (default 0.25)
               x_rotation, y_rotation, z_rotation — degrees (default 0)
-
-  create_sphere
-    REQUIRED  radius      — sphere radius
-    OPTIONAL  center_x, center_y, center_z (default 0.0)
 
   create_pattern
     OPTIONAL  u_size, v_size, u_spacing, v_spacing

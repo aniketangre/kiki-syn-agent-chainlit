@@ -64,9 +64,7 @@ def _describe_tool(name: str, args: dict) -> str:
             f"I'll reconstruct a **{cell}** lattice in Synera — "
             f"volume fraction **{vf}**, rotation {rot}."
         )
-    if name == "create_sphere":
-        return f"I'll create a sphere with radius **{args.get('radius', '?')}** in Synera."
-    if name == "create_pattern":
+if name == "create_pattern":
         labels = {0: "Curved Beam", 1: "Glass Sponge 1", 2: "Glass Sponge 2"}
         pt = labels.get(args.get("pattern_type", 1), "surface pattern")
         return f"I'll create a **{pt}** surface pattern in Synera."
