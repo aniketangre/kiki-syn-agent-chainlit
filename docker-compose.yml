@@ -3,7 +3,7 @@ name: kiki-agent-db
 services:
   postgres:
     image: pgvector/pgvector:pg16      # PostgreSQL 16 with pgvector pre-installed
-    container_name: rag_postgres
+    container_name: kiki_postgres
     restart: unless-stopped            # auto-restarts on reboot, stops only if you stop it manually
     environment:
       POSTGRES_USER:     postgres

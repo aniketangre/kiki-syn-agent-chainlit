@@ -5,12 +5,12 @@ $projectDir = $PSScriptRoot
 
 # Step 1: Ensure the rag_postgres container is running.
 # Use 'docker ps -q' to check — returns the container ID if running, empty if not.
-$runningId = docker ps -q --filter "name=rag_postgres" --filter "status=running" 2>$null
+$runningId = docker ps -q --filter "name=kiki_postgres" --filter "status=running" 2>$null
 
 if ($runningId) {
-    Write-Host "rag_postgres is already running." -ForegroundColor Green
+    Write-Host "kiki_postgres is already running." -ForegroundColor Green
 } else {
-    Write-Host "Starting rag_postgres container..." -ForegroundColor Cyan
+    Write-Host "Starting kiki_postgres container..." -ForegroundColor Cyan
     docker compose -f "$projectDir\docker-compose.yml" up -d
 
     if ($LASTEXITCODE -ne 0) {
@@ -18,7 +18,7 @@ if ($runningId) {
         exit 1
     }
 
-    Write-Host "rag_postgres is ready." -ForegroundColor Green
+    Write-Host "kiki_postgres is ready." -ForegroundColor Green
 }
 
 # Step 2: Check if the KIKI API is reachable.

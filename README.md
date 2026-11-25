@@ -281,13 +281,13 @@ docker compose up -d        # start the database
 docker compose down         # stop (data preserved)
 docker compose down -v      # stop and delete ALL data
 docker ps                   # check container status
-docker logs rag_postgres    # view database logs
+docker logs kiki_postgres    # view database logs
 ```
 
 ### Backing up the database
 
 ```powershell
-docker exec rag_postgres pg_dump -U postgres kiki_agent > backup.sql
+docker exec kiki_postgres pg_dump -U postgres kiki_agent > backup.sql
 ```
 
 ---

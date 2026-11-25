@@ -12,7 +12,7 @@ What it does:
   3. Creates the LangGraph checkpointer tables inside that database
 
 Requirements:
-  - Docker must be running and the container started: docker compose up -d
+  - Docker must be running and the container started: docker compose up -d  (container: kiki_postgres)
   - The user in POSTGRES_URI must have CREATE DATABASE permissions
 
 Configuration:
